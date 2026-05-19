@@ -15,7 +15,7 @@ boot_reg(
   link = "logit",
   link.phi = "log",
   type = "ML",
-  na.rm = TRUE
+  na_rm = TRUE
 )
 }
 \arguments{
@@ -51,7 +51,7 @@ get_regression_coefs, only for betaregression}
 \item{type}{is one of ML, BR, BC for maximum likelihood, bias reduces, or
 bias corrected estimates to be passed to get_regression_coefs}
 
-\item{na.rm}{remove the problematic 'no topic' documents now so that we don't
+\item{na_rm}{remove the problematic 'no topic' documents now so that we don't
 end up with a bootstrap sample of all NAs}
 }
 \value{

@@ -284,4 +284,3 @@ brett_plot(beta_gam,
 ## Spoiler Alert
 
 Anyway you look at it we find that `juliet`, `death`, are increasingly likely as the story moves along.
-

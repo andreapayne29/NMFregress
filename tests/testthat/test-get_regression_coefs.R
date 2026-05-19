@@ -17,7 +17,6 @@ test_that("multiplication works", {
   expect_equal(coefs["romeo","precision.act2"],
                0.5200418, tolerance = .0000001)
 
-
   # OLS
   coefs <- get_regression_coefs(my_output, model = "OLS", topics = c("romeo","juliet"))
   expect_equal(coefs["romeo","Intercept"],
@@ -38,6 +37,4 @@ test_that("multiplication works", {
                2.339623, tolerance = .00001)
   expect_equal(coefs["romeo",200],
                -1.910082, tolerance = .00001)
-
-
 })

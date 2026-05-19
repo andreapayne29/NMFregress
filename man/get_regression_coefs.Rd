@@ -14,7 +14,7 @@ get_regression_coefs(
   link.phi = "log",
   type = "ML",
   topics = NULL,
-  na.rm = TRUE
+  na_rm = TRUE
 )
 }
 \arguments{
@@ -47,7 +47,7 @@ Likelihood, Bias Corrected, or Bias Reduced respectively}
 \item{topics}{which topics should be used. If empty, then all of them are
 used.}
 
-\item{na.rm}{remove the problematic 'no topic' documents now so that we don't
+\item{na_rm}{remove the problematic 'no topic' documents now so that we don't
 end up with a bootstrap sample of all NAs}
 }
 \value{
@@ -70,5 +70,8 @@ get_regression_coefs(my_output, model = "OLS")
 
 my_output$covariates <- matrix( acts_continuous,
             ncol = 1, dimnames = list(NULL,"acts"))
+coefs <- get_regression_coefs(my_output,
+                              model = "GAM",
+                              topics = "romeo")
 
 }

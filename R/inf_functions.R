@@ -33,7 +33,7 @@
 #' @param topics which topics should be used. If empty, then all of them are
 #' used.
 #'
-#' @param na.rm remove the problematic 'no topic' documents now so that we don't
+#' @param na_rm remove the problematic 'no topic' documents now so that we don't
 #' end up with a bootstrap sample of all NAs
 #'
 #' @return A matrix of regression coefficients (named if column names have been
@@ -55,9 +55,9 @@
 #'
 #' my_output$covariates <- matrix( acts_continuous,
 #'             ncol = 1, dimnames = list(NULL,"acts"))
-# coefs <- get_regression_coefs(my_output,
-#                               model = "GAM",
-#                               topics = "romeo")
+#' coefs <- get_regression_coefs(my_output,
+#'                               model = "GAM",
+#'                               topics = "romeo")
 #'
 #' @export
 get_regression_coefs <- function(output,
@@ -69,7 +69,7 @@ get_regression_coefs <- function(output,
                                  link.phi = "log",
                                  type = "ML",
                                  topics = NULL,
-                                 na.rm = TRUE) {
+                                 na_rm = TRUE) {
   ##### Check input types/whether they include covariates
   if (!inherits(output, "nmf_output")) {
     stop("Output must be of class nmf_output.")
@@ -96,15 +96,15 @@ get_regression_coefs <- function(output,
   }
   ##### set up matrices for regression/return value
   # select the rows corresponding to topics selected:
-  if (na.rm) {
+  if (na_rm) {
     #remove the problematic 'no topic' documents now so that we don't end up
     # with a bootstrap sample of all NAs
     theta <- t(output$theta[which(output$anchors %in% topics),
                             which(!is.na(1 / output$sum_theta_over_docs) &
-                                    !is.infinite(1 / output$sum_theta_over_docs)
+                                  !is.infinite(1 / output$sum_theta_over_docs)
                                   )])
     covariates         <- output$covariates[which(
-      !is.na(1 / output$sum_theta_over_docs) &
+        !is.na(1 / output$sum_theta_over_docs) &
         !is.infinite(1 / output$sum_theta_over_docs)), ] |>
       as.data.frame()
     colnames(covariates) <- colnames(output$covariates)
@@ -217,21 +217,21 @@ get_regression_coefs <- function(output,
             while (fail != 0 && fail < 10) {
               tryCatch({
                 if (fail == 1) {
-                  data =  data.frame(theta_nonzero[,thetaindex]
-                                     ,covariates)
-                }else{
+                  data =  data.frame(theta_nonzero[, thetaindex]
+                                     , covariates)
+                }else {
                   # reconstruct theta_nonzero but pull it inwards away from boundaries.
                   data =  data.frame(
                     normalize(theta[,thetaindex] +
-                                (fail-1)*min(1/ncol(theta[,thetaindex]),
-                          min(theta[theta[,thetaindex] > 0,thetaindex] / 1000)),
+                                (fail-1)*min(1/ncol(theta[, thetaindex]),
+                          min(theta[theta[, thetaindex] > 0, thetaindex] / 1000)),
                           denominator = denominator +
-                            (fail-1+1)*min(1/ncol(theta[, thetaindex]),
-                                           min(theta[theta[,thetaindex] > 0,
+                            (fail - 1 + 1) * min( 1 / ncol(theta[, thetaindex]),
+                                           min(theta[theta[, thetaindex] > 0,
                                                      thetaindex] / 1000))
                     ),covariates)
                 }
-                colnames(data)  = c("y",colnames(covariates))
+                colnames(data)  <- c("y",colnames(covariates))
                 beta[thetaindex,] <-
                   betareg::betareg(formula, data = data,
                                    link = link,
@@ -242,9 +242,9 @@ get_regression_coefs <- function(output,
                   coefficients()|>
                   unlist()
                 fail <- 0 #if it works
-              },# end trycatch expression
-              error = function(e){
-                fail <<-fail+1
+              }, # end trycatch expression
+              error = function(e) {
+                fail <<- fail+1
                 cat(fail);
                 cat(" It'll be ok... Sometimes beta-type regressions
                     fail because the smallest value is too close to zero.
@@ -257,10 +257,10 @@ get_regression_coefs <- function(output,
             }# end while
           }
 
-        }else{# return the betareg model output and not just the coefficients
+        }else {# return the betareg model output and not just the coefficients
           beta = list()
           for(thetaindex in seq_len(ncol(theta_nonzero))){
-            fail = 1
+            fail <- 1
             while (fail != 0 && fail < 10) {
               tryCatch({
                 if (fail == 1) {
@@ -271,10 +271,10 @@ get_regression_coefs <- function(output,
                   # from boundaries.
                   data =  data.frame(
                     normalize(theta[,thetaindex] +
-                        (fail-1)*min(1/ncol(theta[, thetaindex]) ,
+                        (fail - 1) * min(1 / ncol(theta[, thetaindex]) ,
                         min(theta[theta[, thetaindex] > 0, thetaindex] / 1000)),
                           denominator = denominator +
-                          (fail-1+1)*min(1/ncol(theta[,thetaindex]) ,
+                          (fail - 1 + 1) * min(1 / ncol(theta[, thetaindex]) ,
                           min(theta[theta[, thetaindex] > 0, thetaindex] / 1000))
                     ),covariates)
                 }
@@ -322,8 +322,8 @@ get_regression_coefs <- function(output,
           }
           # make a place to put the predicted values.
           beta = matrix(NA, nrow = ncol(theta_nonzero), ncol = nrow_x)
-          if(ncol_x==1){
-            colnames(beta) = apply(pred_X_vals, 1, function(x) {paste0("X.",x)})
+          if(ncol_x == 1) {
+            colnames(beta) = apply(pred_X_vals, 1, function(x) {paste0("X.", x)})
           }else{
             colnames(beta) = apply(pred_X_vals |> matrix(ncol = 1),
                                    1,
@@ -342,11 +342,11 @@ get_regression_coefs <- function(output,
                   # but pull it inwards away from boundaries.
                   data =  data.frame(
                     normalize(theta[, thetaindex] +
-                          (fail - 1) * min(1/ncol(theta[,thetaindex]) ,
+                          (fail - 1) * min(1/ncol(theta[, thetaindex]) ,
                         min(theta[theta[,thetaindex] > 0, thetaindex] / 1000)),
                               denominator = denominator +
                           (fail - 1 + 1) * min(1 / ncol(theta[, thetaindex]) ,
-                              min(theta[theta[,thetaindex]>0,thetaindex]/1000))
+                              min(theta[theta[,thetaindex]>0, thetaindex] /1000))
                     ),covariates)
                 }
                 colnames(data)  = c("y",colnames(covariates))
@@ -388,13 +388,13 @@ get_regression_coefs <- function(output,
                   # reconstruct theta_nonzero but pull it inwards away from boundaries.
                   data =  data.frame(
                     normalize(theta[,thetaindex] +
-                      (fail-1)*min(1/ncol(theta[, thetaindex]) ,
+                      (fail - 1) * min(1 / ncol(theta[, thetaindex]) ,
                       min(theta[theta[, thetaindex] > 0, thetaindex] / 1000)),
                               denominator = denominator +
-                    (fail-1+1)*min(1/ncol(theta[, thetaindex]),
-                                   min(theta[theta[,thetaindex] > 0,
+                    (fail - 1 + 1) * min(1/ncol(theta[, thetaindex]),
+                                   min(theta[theta[, thetaindex] > 0,
                                              thetaindex] / 1000))
-                    ),covariates)
+                    ), covariates)
                 }
                 colnames(data)  = c("y",colnames(covariates))
                 beta[[thetaindex]] <- mgcv::gam(formula,
@@ -426,28 +426,28 @@ get_regression_coefs <- function(output,
       }# end of GAM
     }# end of model choice
 
-  }else{ # with weights
+  }else { # with weights
     if(model == "OLS"){
-      if(return_just_coefs){
+      if(return_just_coefs) {
         beta = stats::coef(stats::lm.fit(x = as.matrix(covariates),
                                          y = theta_nonzero,
                                          weights = obs_weights))
         beta = t(beta)
         rownames(beta) = topics
-      }else{# return the lm model output
+      }else {# return the lm model output
         beta = stats::lm.fit(x = covariates,
                              y = theta_nonzero,
                              weights = obs_weights)
         colnames(beta$coefficients) = topics
       }
 
-    }else{
+    }else {
       if(model == "BETA"){
         # use a Beta regression model with weights
         zero_block = matrix(0, nrow(covariates) - nrow(theta), ncol(theta))
         theta_nonzero = rbind(theta_nonzero, zero_block)
         obs_weights = c(obs_weights, rep(1, nrow(zero_block)))
-        if(return_just_coefs){#
+        if(return_just_coefs) {#
           beta = matrix(NA,
                         nrow = ncol(theta_nonzero),
                         ncol = 2*length(covariates))
@@ -456,11 +456,11 @@ get_regression_coefs <- function(output,
           rownames(beta) = topics
           for(thetaindex in 1:ncol(theta_nonzero)){
             fail = 0
-            while(fail!=0 & fail < 10){
+            while(fail != 0 & fail < 10 ){
               fail = 1
               tryCatch({
                 cat(paste0("working on ", thetaindex))
-                beta[thetaindex,] =
+                beta[thetaindex, ] =
                   betareg::betareg(formula, data = data,
                                    link = link,
                                    weights = obs_weights,
@@ -474,18 +474,18 @@ get_regression_coefs <- function(output,
 
                 fail = -1 #it works
 
-              },error = function(e){print(fail)},
+              }, error = function(e){print(fail)},
               finally= {
-                if(all(is.na(beta[thetaindex,]))){
+                if(all(is.na(beta[thetaindex,])))  {
                   if(fail != -1){
                     cat(paste(fail, "fail for index ",
                               thetaindex, " epsilon = ",
-                              min(theta_nonzero[,thetaindex])))}
+                              min(theta_nonzero[, thetaindex])))}
                   fail <<- fail + 1;
                   #if it worked now fail = 0,
                   # if it didn't work then fail is growing 2+
-                  theta_nonzero[, thetaindex] <<- theta_nonzero[,thetaindex] +
-                    fail*min(theta_nonzero[, thetaindex])*.5;
+                  theta_nonzero[, thetaindex] <<- theta_nonzero[, thetaindex] +
+                    fail * min(theta_nonzero[, thetaindex]) * .5;
                 }
               }
               )
@@ -493,11 +493,11 @@ get_regression_coefs <- function(output,
 
           }
         }else{
-          beta = list()
+          beta <- list()
           for(thetaindex in 1:ncol(theta_nonzero)){
-            fail = 0
-            while(fail!=0 & fail < 10){
-              fail = 1
+            fail <- 0
+            while(fail != 0 & fail < 10) {
+              fail <- 1
               tryCatch({
                 if(fail == 1){
                   data =  data.frame(theta_nonzero[,thetaindex]
@@ -507,7 +507,7 @@ get_regression_coefs <- function(output,
                   # pull it inwards away from boundaries.
                   data =  data.frame(
                     normalize(theta[,thetaindex] +
-                                (fail - 1) * min(1 / ncol(theta[,thetaindex]) ,
+                                (fail - 1) * min(1 / ncol(theta[, thetaindex]) ,
                         min(theta[theta[, thetaindex] > 0, thetaindex] / 1000)),
                               denominator = denominator +
                                 (fail - 1 + 1 ) * min(
@@ -532,7 +532,7 @@ get_regression_coefs <- function(output,
 
               },error = function(e){print(fail)},
               finally= {
-                if(all(is.na(beta[[thetaindex]]))){
+                if(all(is.na(beta[[thetaindex]]))) {
                   if(fail != -1){
                     cat(paste(fail,
                               "fail for index ",
@@ -565,7 +565,7 @@ get_regression_coefs <- function(output,
             ncol_x <- ncol(unique(covariates))
           }
           # make a place to put the predicted values.
-          beta = matrix(NA, nrow = ncol(theta_nonzero), ncol = nrow_x)
+          beta <- matrix(NA, nrow = ncol(theta_nonzero), ncol = nrow_x)
           if (ncol_x == 1) {
             colnames(beta) <- apply(pred_X_vals, 1,
                                    function(x) {
@@ -688,7 +688,7 @@ get_regression_coefs <- function(output,
 #' @param link.phi is the link function for the precision to be passed to
 #' get_regression_coefs, only for betaregression
 #'
-#' @param na.rm remove the problematic 'no topic' documents now so that we don't
+#' @param na_rm remove the problematic 'no topic' documents now so that we don't
 #' end up with a bootstrap sample of all NAs
 #'
 #' @param type  is one of ML, BR, BC for maximum likelihood, bias reduces, or
@@ -727,7 +727,7 @@ boot_reg <- function(output,
                     link = "logit",
                     link.phi = "log",
                     type = "ML",
-                    na.rm = TRUE) {
+                    na_rm = TRUE) {
   ##### check input types/whether covariates are specified
   if (!inherits(output, "nmf_output")) {
     stop("Output must be of class nmf_output.")
@@ -746,7 +746,7 @@ boot_reg <- function(output,
   }
   ##### set up matrices for regression/return value
   # select the rows corresponding to topics selected:
-  if (na.rm) {
+  if (na_rm) {
     #remove the problematic 'no topic' documents now so that we don't end up
     # with a bootstrap sample of all NAs
     theta              <- output$theta[which(output$anchors %in% topics), which(
@@ -826,7 +826,7 @@ boot_reg <- function(output,
       link.phi = link.phi,
       type = type,
       topics = topics,
-      na.rm = na.rm
+      na_rm = na_rm
     )
     to_return[[j]] <- boot_coefs
 
@@ -859,7 +859,7 @@ boot_reg <- function(output,
     link.phi = ifelse(model == "OLS", NA, link.phi),
     type = ifelse(model == "BETA", type, NA),
     topics = topics,
-    na.rm = na.rm
+    na_rm = na_rm
   )
   class(toreturn) <- c("BRETT_ouput", "list")
   return(toreturn)
@@ -906,7 +906,7 @@ boot_reg <- function(output,
 #' @param type  is one of ML, BR, BC for maximum likelihood, bias reduces, or
 #' bias corrected estimates to be passed to get_regression_coefs
 #'
-#' @param na.rm remove the problematic 'no topic' documents now so that we don't
+#' @param na_rm remove the problematic 'no topic' documents now so that we don't
 #' end up with a bootstrap sample of all NAs
 #'
 #' @return Most of the original call values and a boot_reg list containing
@@ -949,7 +949,7 @@ boot_reg_stratified <- function(output,
                                link = "logit",
                                link.phi = "log",
                                type = "ML",
-                               na.rm = TRUE) {
+                               na_rm = TRUE) {
   ##### check input types/whether covariates are specified
   if (!inherits(output, "nmf_output")) {
     stop("Output must be of class nmf_output.")
@@ -973,7 +973,7 @@ boot_reg_stratified <- function(output,
 
   ##### set up matrices for regression/return value
   # select the rows corresponding to topics selected:
-  if (na.rm) {
+  if (na_rm) {
     #remove the problematic 'no topic' documents now so that we don't end up
     # with a bootstrap sample of all NAs
     theta              <- output$theta[which(output$anchors %in% topics), which(
@@ -1063,7 +1063,7 @@ boot_reg_stratified <- function(output,
         link.phi = link.phi,
         type = type,
         topics = topics,
-        na.rm = na.rm
+        na_rm = na_rm
       )
       to_return[[i]] <- boot_coefs
 
@@ -1125,7 +1125,7 @@ boot_reg_stratified <- function(output,
           link.phi = link.phi,
           type = type,
           topics = topics,
-          na.rm = na.rm
+          na_rm = na_rm
         )
       )
     }
@@ -1141,7 +1141,7 @@ boot_reg_stratified <- function(output,
     link.phi = ifelse(model == "OLS", NA, link.phi),
     type = type,
     topics = topics,
-    na.rm = na.rm,
+    na_rm = na_rm,
     type = "stratified bootstrap"
   )
   class(toreturn) <- c("BRETT_ouput", "list")

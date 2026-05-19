@@ -78,7 +78,7 @@ solve_nmf <- function(input, user_anchors = NULL) {
   anchor_block <- input$tdm[anchor_rows, ]
   other_block  <- input$tdm[non_anchor_rows, ]
   Y <- matrix(rep(0, length(anchor_rows) * length(non_anchor_rows)),
-             ncol = length(anchor_rows))
+              ncol = length(anchor_rows))
 
   ##### prepare matrices for input to nnls (using Haddamard random projection
   # if specified)
@@ -285,9 +285,9 @@ get_reconstruction_error <- function(output,
   tdm_hat <- output$phi[output$vocab, 1] %*% t(output$theta[1, ])
   # recall that there has been a shuffling of rows of phi
   frobeniusnorm[1, "frobenius_norm"] <- norm(tdm_hat[, docs_2_keep] -
-                                           input$tdm[output$vocab,
-                                                     docs_2_keep],
-                                           type = "f")
+                                               input$tdm[output$vocab,
+                                                         docs_2_keep],
+                                             type = "f")
     for (topic_index in 2:ncol(output$phi)) {
               tdm_hat <- output$phi[output$vocab, 1:topic_index] %*%
                 output$theta[1:topic_index, ]
