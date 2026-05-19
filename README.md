@@ -2,7 +2,7 @@ Now as an R package!
 
 ## Installation; 
 
-`devtools::install_github("iamdavecampbell/NMFregress")`
+`devtools::install_github("iamdavecampbell/NMFregress", build_vignettes = TRUE)`
 
 ## Current version:
 
