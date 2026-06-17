@@ -9,6 +9,15 @@
 #' user wishes to find anchors via their
 #' own method. Defaults to null.
 #'
+#' @param covariates Matrix containing the covariates for each document.
+#' Defaults to null.
+#'
+#' @param covariate_impact String indicating if and how covariates should be
+#' included in the model. Options are "none" for a standard NMF model, "gamma"
+#' for a model with a constant Lambda and varying Gamma, "lambda" for a model
+#' with a varying Lambda and constant Gamma, and "both" for a model with varies
+#' both Lambda and Gamma. Defaults to "none".
+#'
 #' @return An object of class nmf_output. This contains the word-topic matrix,
 #' the block of the word-topic matrix associated with anchor words, the anchor
 #' words,
@@ -28,7 +37,8 @@
 #' my_output = solve_nmf(my_input)
 #'
 #' @export
-solve_nmf <- function(input, user_anchors = NULL) {
+solve_nmf <- function(input, user_anchors = NULL, covariates = NULL,
+                      covariate_impact = "none") {
 
   ##### check/convert input types
   if (!inherits(input, "nmf_input")) {
