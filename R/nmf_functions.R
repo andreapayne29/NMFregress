@@ -84,53 +84,227 @@ solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
   non_anchor_rows <- setdiff(seq_along(input$vocab), anchor_rows)
   anchor_block <- input$tdm[anchor_rows, ]
   other_block  <- input$tdm[non_anchor_rows, ]
-  Y <- matrix(rep(0, length(anchor_rows) * length(non_anchor_rows)),
-              ncol = length(anchor_rows))
+  # # determine number of covariates
+  # num_covariates <- dim(input$covariates)[2]
+  # num_covariates <- ifelse(any(colnames(input$covariates) %in%
+  #                            c("intercept", "Intercept")),
+  #                          yes = num_covariates - 1,
+  #                          no = num_covariates)
 
-  ##### prepare matrices for input to nnls (using Haddamard random projection
-  # if specified)
-  if (input$project == TRUE) {
+  if (covariate_impact == "none") {
+    # anchor_block <- input$tdm[anchor_rows, ]
+    # other_block  <- input$tdm[non_anchor_rows, ]
+    Y <- matrix(rep(0, length(anchor_rows) * length(non_anchor_rows)),
+                ncol = length(anchor_rows))
 
-    matrices_proj <- project_matrices(anchor_block, other_block)
-    A <- matrices_proj[["A"]]
-    B <- matrices_proj[["B"]]
+    ##### prepare matrices for input to nnls (using Haddamard random projection
+    # if specified)
+    if (input$project == TRUE) {
 
-  } else {
-    ##### transpose matrices for input to nnls
-    A <- t(anchor_block)
-    B <- t(other_block)
-  }
+      matrices_proj <- project_matrices(anchor_block, other_block)
+      A <- matrices_proj[["A"]]
+      B <- matrices_proj[["B"]]
 
-  ##### solve non-negative least squares problem for each word
-  for (i in seq_len(nrow(Y))) {
-    Y[i, ] <- as.vector(nnls::nnls(A = A, b = B[, i])$x)
-    if (i %% 500 == 0) {
-      cat(i, " rows of word-topic matrix recovered.\n")
+    } else {
+      ##### transpose matrices for input to nnls
+      A <- t(anchor_block)
+      B <- t(other_block)
+    }
+
+    ##### solve non-negative least squares problem for each word
+    for (i in seq_len(nrow(Y))) {
+      Y[i, ] <- as.vector(nnls::nnls(A = A, b = B[, i])$x)
+      if (i %% 500 == 0) {
+        cat(i, " rows of word-topic matrix recovered.\n")
       }
+    }
+
+    y_with_ones <- rbind(diag(length(anchor_rows)), Y)
+    colnames(y_with_ones) <- input$vocab[anchor_rows]
+    lambdas <- 1 / apply(y_with_ones, FUN = sum, MARGIN = 2)
+    anchor_order <- order(lambdas)
+    phi   <- y_with_ones %*% diag(lambdas)
+    colnames(phi) <- colnames(y_with_ones)
+    theta <- diag(1 / lambdas) %*% anchor_block
+    phi   <- phi[, anchor_order]
+    theta <- theta[anchor_order, ]
+    rownames(theta) <- colnames(phi)
+
+    to_return <- list(phi = phi,
+                      theta = theta,
+                      anchors = anchors[anchor_order],
+                      extract_order_anchors = extract_order_anchors,
+                      lambdas = lambdas,
+                      vocab = input$vocab[c(anchor_rows, non_anchor_rows)],
+                      topics = input$topics,
+                      covariates = input$covariate,
+                      sum_theta_over_docs =  apply(theta, 2, sum),
+                      user_anchors = user_anchors)
+
+  } else if (covariate_impact == "gamma"){
+
+    nmf_by_cov <- list()
+    by_cov <- list()
+
+    cov_names <- colnames(input$covariates)
+
+    if(any(cov_names %in% c("intercept", "Intercept"))){
+      cov_names <- cov_names[-(which(cov_names %in%
+                                       c("intercept", "Intercept")))]
+    }
+
+    for (cov in cov_names){
+
+      ### get block matrices
+      sep_anchor_block <- anchor_block[ , which(input$covariates[,cov] == 1)]
+      sep_other_block  <- other_block[ , which(input$covariates[,cov] == 1)]
+      Y <- matrix(rep(0, length(anchor_rows) * length(non_anchor_rows)),
+                  ncol = length(anchor_rows))
+
+      ##### prepare matrices for input to nnls (using Haddamard random projection
+      # if specified)
+      if (input$project == TRUE) {
+
+        matrices_proj <- project_matrices(sep_anchor_block, sep_other_block)
+        A <- matrices_proj[["A"]]
+        B <- matrices_proj[["B"]]
+
+      } else {
+        ##### transpose matrices for input to nnls
+        A <- t(sep_anchor_block)
+        B <- t(sep_other_block)
+      }
+
+      ##### solve non-negative least squares problem for each word
+      for (i in seq_len(nrow(Y))) {
+        Y[i, ] <- as.vector(nnls::nnls(A = A, b = B[, i])$x)
+        if (i %% 500 == 0) {
+          cat(i, " rows of word-topic matrix recovered.\n")
+        }
+      }
+
+      nmf_by_cov[[cov]] <- list("num_docs" = length(which(input$covariates[,cov] == 1)),
+                                "sep_anchor_block" = sep_anchor_block,
+                                #"sep_other_block" = sep_other_block,
+                                #"A" = A,
+                                #"B" = B,
+                                "Y" = Y,
+                                "phi" = NULL,
+                                "theta" = NULL,
+                                "gamma" = NULL)
+
+    }
+
+    ### weight the Ys from each covariate to make a weighted average Y
+    total_docs <- nrow(input$covariates)
+    Y_weighted <- matrix(rep(0, length(anchor_rows) * length(non_anchor_rows)),
+                              ncol = length(anchor_rows))
+
+    for (cov in cov_names){
+
+      Y_weighted <- Y_weighted +
+        ((nmf_by_cov[[cov]]$num_docs/total_docs)*nmf_by_cov[[cov]]$Y)
+    }
+
+    ### finding common lambda
+    y_with_ones <- rbind(diag(length(anchor_rows)), Y_weighted)
+    colnames(y_with_ones) <- input$vocab[anchor_rows]
+    lambdas <- 1 / apply(y_with_ones, FUN = sum, MARGIN = 2)
+    anchor_order <- order(lambdas)
+
+    ### finding separate gammas, phis, and thetas
+    for (cov in cov_names){
+
+      sep_y_with_ones <- rbind(diag(length(anchor_rows)),
+                               nmf_by_cov[[cov]]$Y)
+      colnames(sep_y_with_ones) <- input$vocab[anchor_rows]
+      phi   <- sep_y_with_ones %*% diag(lambdas)
+      colnames(phi) <- colnames(sep_y_with_ones)
+      phi   <- phi[, anchor_order]
+
+      theta <- diag(1 / lambdas) %*% nmf_by_cov[[cov]][["sep_anchor_block"]]
+      theta <- theta[anchor_order, ]
+      rownames(theta) <- colnames(phi)
+
+      nmf_by_cov[[cov]]$phi <- phi
+      nmf_by_cov[[cov]]$gamma <- phi[-c(1:10),]
+      nmf_by_cov[[cov]]$theta <- theta
+
+      by_cov[[cov]] <- list("phi" = phi,
+                            "theta" = theta,
+                            "gamma" = phi[-c(1:10),])
+    }
+
+    ### merging into universal phi and theta
+    for (cov in cov_names){
+
+      if(cov == cov_names[1]){
+        phi <- nmf_by_cov[[cov]]$phi
+        theta <- nmf_by_cov[[cov]]$theta
+      }else{
+        phi <- cbind(phi, nmf_by_cov[[cov]]$phi)
+        theta <- Matrix::bdiag(theta, nmf_by_cov[[cov]]$theta)
+      }
+    }
+
+    to_return <- list(by_cov = by_cov,
+                      phi = phi,
+                      theta = theta,
+                      anchors = anchors[anchor_order],
+                      extract_order_anchors = extract_order_anchors,
+                      lambdas = lambdas,
+                      vocab = input$vocab[c(anchor_rows, non_anchor_rows)],
+                      topics = input$topics,
+                      covariates = input$covariate,
+                      sum_theta_over_docs =  apply(theta, 2, sum),
+                      user_anchors = user_anchors)
   }
+
+
+  # ##### prepare matrices for input to nnls (using Haddamard random projection
+  # # if specified)
+  # if (input$project == TRUE) {
+  #
+  #   matrices_proj <- project_matrices(anchor_block, other_block)
+  #   A <- matrices_proj[["A"]]
+  #   B <- matrices_proj[["B"]]
+  #
+  # } else {
+  #   ##### transpose matrices for input to nnls
+  #   A <- t(anchor_block)
+  #   B <- t(other_block)
+  # }
+
+  # ##### solve non-negative least squares problem for each word
+  # for (i in seq_len(nrow(Y))) {
+  #   Y[i, ] <- as.vector(nnls::nnls(A = A, b = B[, i])$x)
+  #   if (i %% 500 == 0) {
+  #     cat(i, " rows of word-topic matrix recovered.\n")
+  #     }
+  # }
 
   ##### solve for diagonal scaling matrix (lambda), phi, and theta
-  y_with_ones <- rbind(diag(length(anchor_rows)), Y)
-  colnames(y_with_ones) <- input$vocab[anchor_rows]
-  lambdas <- 1 / apply(y_with_ones, FUN = sum, MARGIN = 2)
-  anchor_order <- order(lambdas)
-  phi   <- y_with_ones %*% diag(lambdas)
-  colnames(phi) <- colnames(y_with_ones)
-  theta <- diag(1 / lambdas) %*% anchor_block
-  phi   <- phi[, anchor_order]
-  theta <- theta[anchor_order, ]
-  rownames(theta) <- colnames(phi)
+ # y_with_ones <- rbind(diag(length(anchor_rows)), Y)
+  # colnames(y_with_ones) <- input$vocab[anchor_rows]
+  # lambdas <- 1 / apply(y_with_ones, FUN = sum, MARGIN = 2)
+  # anchor_order <- order(lambdas)
+  # phi   <- y_with_ones %*% diag(lambdas)
+  # colnames(phi) <- colnames(y_with_ones)
+  # theta <- diag(1 / lambdas) %*% anchor_block
+  # phi   <- phi[, anchor_order]
+  # theta <- theta[anchor_order, ]
+  # rownames(theta) <- colnames(phi) #lambdas[anchor_order] |> names()
   ##### return object of class nmf_output
-  to_return <- list(phi = phi,
-                   theta = theta,
-                   anchors = anchors[anchor_order],
-                   extract_order_anchors = extract_order_anchors,
-                   lambdas = lambdas,
-                   vocab = input$vocab[c(anchor_rows, non_anchor_rows)],
-                   topics = input$topics,
-                   covariates = input$covariate,
-                   sum_theta_over_docs =  apply(theta, 2, sum),
-                   user_anchors = user_anchors)
+  # to_return <- list(phi = phi,
+  #                  theta = theta,
+  #                  anchors = anchors[anchor_order],
+  #                  extract_order_anchors = extract_order_anchors,
+  #                  lambdas = lambdas,
+  #                  vocab = input$vocab[c(anchor_rows, non_anchor_rows)],
+  #                  topics = input$topics,
+  #                  covariates = input$covariate,
+  #                  sum_theta_over_docs =  apply(theta, 2, sum),
+  #                  user_anchors = user_anchors)
   class(to_return) <- "nmf_output"
   cat("Complete -- outputting object of class nmf_output.\n")
   return(to_return)
