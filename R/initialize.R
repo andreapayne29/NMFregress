@@ -14,7 +14,7 @@
 #'
 #' @param project Should a random projection be performed? If yes,
 #' random projections are used in two places. First, they reduce the
-#' dimensionality of the term-doducment matrix to assist in the finding of
+#' dimensionality of the term-document matrix to assist in the finding of
 #' anchor words. Second, they are used to speed up the non-negative least
 #' squares problems that are needed to solve for the word-topic matrix.
 #' Defaults to false.
@@ -27,8 +27,8 @@
 #'
 #' @param covariates A design matrix with at least as many rows as the tdm has
 #' columns (one for each document, plus any rows encoding constraints on
-#' categorical variables). Any trailing rows beyond the number of doucments
-#' will be interpreted as constriants. Must be of the standard R matrix type.
+#' categorical variables). Any trailing rows beyond the number of documents
+#' will be interpreted as constraints. Must be of the standard R matrix type.
 #' Matrix columns should be named if the user wants regression coefficients
 #' named accordingly. Intercept column must be explicitly included if desired.
 #'
