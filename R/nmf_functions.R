@@ -9,9 +9,6 @@
 #' user wishes to find anchors via their
 #' own method. Defaults to null.
 #'
-#' @param covariates Matrix containing the covariates for each document.
-#' Defaults to null.
-#'
 #' @param covariate_impact String indicating if and how covariates should be
 #' included in the model. Options are "none" for a standard NMF model, "gamma"
 #' for a model with a constant Lambda and varying Gamma, "lambda" for a model
@@ -34,11 +31,11 @@
 #'                         rownames(Romeo_and_Juliet_tdm),
 #'                         topics = 10,
 #'                         covariates = acts)
-#' my_output = solve_nmf(my_input)
+#' my_output = solve_nmf(my_input,
+#'                       covariate_impact = "gamma")
 #'
 #' @export
-solve_nmf <- function(input, user_anchors = NULL, covariates = NULL,
-                      covariate_impact = "none") {
+solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
 
   ##### check/convert input types
   if (!inherits(input, "nmf_input")) {
@@ -94,29 +91,9 @@ solve_nmf <- function(input, user_anchors = NULL, covariates = NULL,
   # if specified)
   if (input$project == TRUE) {
 
-      ##### set up parameters for random projection
-      power_of_two <- 2^ceiling(log(ncol(anchor_block), base = 2))
-      num_zeros <- power_of_two - ncol(anchor_block)
-      d <- sample(c(1, -1), power_of_two, replace = TRUE)
-
-      ##### apply random projection
-      ##### details are messy, refer to thesis
-      A <- d * rbind(t(anchor_block), matrix(
-          rep(0, num_zeros * nrow(anchor_block)),
-          nrow = num_zeros))
-      A <- as.matrix(apply(A, FUN = phangorn::fhm, MARGIN = 2))
-      B <- d * rbind(t(other_block), matrix(
-        rep(0, num_zeros * nrow(other_block)), nrow = num_zeros))
-      B <- as.matrix(apply(B, FUN = phangorn::fhm, MARGIN = 2))
-      selected <- sample(c(1, 0), power_of_two,
-                  prob = c(input$proj_dim / power_of_two,
-                           1 - input$proj_dim / power_of_two),
-                  replace = TRUE)
-      selected <- which(selected == 1)
-      A <- rep(sqrt(power_of_two / input$proj_dim),
-               length(selected)) * A[selected, ]
-      B <- rep(sqrt(power_of_two / input$proj_dim),
-               length(selected)) * B[selected, ]
+    matrices_proj <- project_matrices(anchor_block, other_block)
+    A <- matrices_proj[["A"]]
+    B <- matrices_proj[["B"]]
 
   } else {
     ##### transpose matrices for input to nnls
@@ -312,4 +289,46 @@ get_reconstruction_error <- function(output,
   print(p)
   return(list(frobeniusnorm = frobeniusnorm,
               plot = p))
+}
+
+
+#' @title project_matrices
+#'
+#' @description Prepares matrices for input to nnls (using Haddamard random
+#' projection if specified). Function for internal use.
+#'
+#' @param anchor_block An object of class nmf_output from solve_nmf
+#'
+#' @param other_block all of the information passed into the original
+#' solve_nmf function
+#'
+#' @return A list of two matrices, A and B, representing the projection of the
+#' anchor block and other block
+
+project_matrices <- function(anchor_block, other_block){
+  ##### set up parameters for random projection
+  power_of_two <- 2^ceiling(log(ncol(anchor_block), base = 2))
+  num_zeros <- power_of_two - ncol(anchor_block)
+  d <- sample(c(1, -1), power_of_two, replace = TRUE)
+
+  ##### apply random projection
+  ##### details are messy, refer to thesis
+  A <- d * rbind(t(anchor_block), matrix(
+    rep(0, num_zeros * nrow(anchor_block)),
+    nrow = num_zeros))
+  A <- as.matrix(apply(A, FUN = phangorn::fhm, MARGIN = 2))
+  B <- d * rbind(t(other_block), matrix(
+    rep(0, num_zeros * nrow(other_block)), nrow = num_zeros))
+  B <- as.matrix(apply(B, FUN = phangorn::fhm, MARGIN = 2))
+  selected <- sample(c(1, 0), power_of_two,
+                     prob = c(input$proj_dim / power_of_two,
+                              1 - input$proj_dim / power_of_two),
+                     replace = TRUE)
+  selected <- which(selected == 1)
+  A <- rep(sqrt(power_of_two / input$proj_dim),
+           length(selected)) * A[selected, ]
+  B <- rep(sqrt(power_of_two / input$proj_dim),
+           length(selected)) * B[selected, ]
+
+  return(list("A" = A, "B" = B))
 }
