@@ -239,15 +239,15 @@ solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
     for (cov in cov_names){
 
       if(cov == cov_names[1]){
-        phi <- nmf_by_cov[[cov]]$phi
-        theta <- nmf_by_cov[[cov]]$theta
+        phi <- by_cov[[cov]]$phi
+        theta <- by_cov[[cov]]$theta
       }else{
-        phi <- cbind(phi, nmf_by_cov[[cov]]$phi)
-        theta <- Matrix::bdiag(theta, nmf_by_cov[[cov]]$theta)
+        phi <- cbind(phi, by_cov[[cov]]$phi)
+        theta <- Matrix::bdiag(theta, by_cov[[cov]]$theta)
       }
     }
 
-    to_return <- list(by_cov = nmf_by_cov,
+    to_return <- list(by_cov = by_cov,
                       phi = phi,
                       theta = theta,
                       anchors = anchors[anchor_order],
