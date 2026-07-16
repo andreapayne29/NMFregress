@@ -227,30 +227,32 @@ solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
       rownames(theta) <- colnames(phi)
 
       nmf_by_cov[[cov]]$phi <- phi
-      nmf_by_cov[[cov]]$gamma <- phi[-c(1:length(anchor_rows)),]
+      #nmf_by_cov[[cov]]$gamma <- phi[-c(1:length(anchor_rows)),]
       nmf_by_cov[[cov]]$theta <- theta
 
       by_cov[[cov]] <- list("phi" = phi,
                             "theta" = theta,
-                            "gamma" = phi[-c(1:length(anchor_rows)),])
+                            #"gamma" = phi[-c(1:length(anchor_rows)),],
+                            "anchor_order" = anchor_order,
+                            "anchors" = anchors[anchor_order])
     }
 
     ### merging into universal phi and theta
-    for (cov in cov_names){
-
-      if(cov == cov_names[1]){
-        phi <- by_cov[[cov]]$phi
-        theta <- by_cov[[cov]]$theta
-      }else{
-        phi <- cbind(phi, by_cov[[cov]]$phi)
-        theta <- Matrix::bdiag(theta, by_cov[[cov]]$theta)
-      }
-    }
+    # for (cov in cov_names){
+    #
+    #   if(cov == cov_names[1]){
+    #     phi <- by_cov[[cov]]$phi
+    #     theta <- by_cov[[cov]]$theta
+    #   }else{
+    #     phi <- cbind(phi, by_cov[[cov]]$phi)
+    #     theta <- Matrix::bdiag(theta, by_cov[[cov]]$theta)
+    #   }
+    # }
 
     to_return <- list(by_cov = by_cov,
                       #phi = phi,
                       #theta = theta,
-                      anchors = anchors[anchor_order],
+                      #anchors = anchors[anchor_order],
                       extract_order_anchors = extract_order_anchors,
                       lambdas = lambdas,
                       vocab = input$vocab[c(anchor_rows, non_anchor_rows)],
@@ -317,15 +319,17 @@ solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
                                   "Y" = Y,
                                   "phi" = phi,
                                   "theta" = theta,
-                                  "gamma" = gamma,
+                                  #"gamma" = gamma,
                                   "lambdas" = lambdas,
-                                  "sum_theta_over_docs" =  apply(theta, 2, sum))
+                                  "sum_theta_over_docs" =  apply(theta, 2, sum),
+                                  "anchor_order" = anchor_order,
+                                  "anchors" = anchors[anchor_order])
 
       }
       to_return <- list(by_cov = nmf_by_cov,
                         #phi = phi,
                         #theta = theta,
-                        anchors = anchors[anchor_order],
+                        #anchors = anchors[anchor_order],
                         extract_order_anchors = extract_order_anchors,
                         #lambdas = lambdas,
                         vocab = input$vocab[c(anchor_rows, non_anchor_rows)],
@@ -431,7 +435,7 @@ print_top_words <- function(output, n = 10) {
 
 ## add cov list in output payne
 
-mod_print_top_words <- function(output, n = 10) {
+cov_print_top_words <- function(output, n = 10) {
 
   ##### check
   if (!inherits(output, "nmf_output")) {
@@ -439,25 +443,27 @@ mod_print_top_words <- function(output, n = 10) {
   }
   n <- as.integer(n)
 
+
+  cov_names <- output$by_cov |> names()
   list_by_cov <- list()
-  #for (j in 1:2){
+
+  ##### get standard lambda ordering from first covariate
+  #anchor_order_standard <- output$by_cov[[1]][["anchor_order"]]
+  anchors_ordered <- output$by_cov[[1]]["anchors"]$anchors
 
   ##### prepare, fill, and return matrix of top words
-  word_list <- list()
-  for (i in 1:output$topics) {
-    word_list[[i]] <- output$vocab[order(output[["by_cov"]][["IPA"]]$phi[, i],
-                                         decreasing = TRUE)][1:n]
-    names(word_list)[i] <- output$anchors[i]
-  }
-  list_by_cov[["IPA"]] <- word_list
+  for (cov in cov_names){
 
-  word_list <- list()
-  for (i in 1:output$topics) {
-    word_list[[i]] <- output$vocab[order(output[["by_cov"]][["Stout"]]$phi[, i],
+    reordered_phi <- output[["by_cov"]][[cov]]$phi[, anchors_ordered]
+
+    word_list <- list()
+    for (i in 1:output$topics) {
+      word_list[[i]] <- output$vocab[order(reordered_phi[,i],
                                          decreasing = TRUE)][1:n]
-    names(word_list)[i] <- output$anchors[i]
+      names(word_list)[i] <- anchors_ordered[i]
+    }
+    list_by_cov[[cov]] <- word_list
   }
-  list_by_cov[["Stout"]] <- word_list
 
   return(list_by_cov)
 
@@ -499,7 +505,28 @@ get_lambda <- function(output) {
 }
 
 
+cov_get_lambda <- function(output) {
+  ##### check input types
+  if (!inherits(output, "nmf_output")) {
+    stop("Output must be an object of class nmf_output.")
+  }
 
+  cov_names <- output$by_cov |> names()
+
+  list_by_cov <- list()
+  for(cov in cov_names){
+    lambdas <- output$by_cov[[cov]]$phi[1:output$topics,
+                          1:output$topics]
+    words_and_lambda <- data.frame(anchors = output$vocab[1:output$topics],
+                                   lambdacrit = apply(lambdas, 1, function(x) {
+                                     1 / x[x != 0]
+                                   })
+    )
+    list_by_cov[[cov]] <- words_and_lambda[order(words_and_lambda$lambdacrit), ]
+  }
+
+  return(list_by_cov)
+}
 
 
 
