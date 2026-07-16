@@ -227,12 +227,12 @@ solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
       rownames(theta) <- colnames(phi)
 
       nmf_by_cov[[cov]]$phi <- phi
-      nmf_by_cov[[cov]]$gamma <- phi[-c(1:10),]
+      nmf_by_cov[[cov]]$gamma <- phi[-c(1:length(anchor_rows)),]
       nmf_by_cov[[cov]]$theta <- theta
 
       by_cov[[cov]] <- list("phi" = phi,
                             "theta" = theta,
-                            "gamma" = phi[-c(1:10),])
+                            "gamma" = phi[-c(1:length(anchor_rows)),])
     }
 
     ### merging into universal phi and theta
@@ -248,8 +248,8 @@ solve_nmf <- function(input, user_anchors = NULL, covariate_impact = "none") {
     }
 
     to_return <- list(by_cov = by_cov,
-                      phi = phi,
-                      theta = theta,
+                      #phi = phi,
+                      #theta = theta,
                       anchors = anchors[anchor_order],
                       extract_order_anchors = extract_order_anchors,
                       lambdas = lambdas,
@@ -429,6 +429,39 @@ print_top_words <- function(output, n = 10) {
 
 }
 
+## add cov list in output payne
+
+mod_print_top_words <- function(output, n = 10) {
+
+  ##### check
+  if (!inherits(output, "nmf_output")) {
+    stop("Output must be an object of class nmf_output.")
+  }
+  n <- as.integer(n)
+
+  list_by_cov <- list()
+  #for (j in 1:2){
+
+  ##### prepare, fill, and return matrix of top words
+  word_list <- list()
+  for (i in 1:output$topics) {
+    word_list[[i]] <- output$vocab[order(output[["by_cov"]][["IPA"]]$phi[, i],
+                                         decreasing = TRUE)][1:n]
+    names(word_list)[i] <- output$anchors[i]
+  }
+  list_by_cov[["IPA"]] <- word_list
+
+  word_list <- list()
+  for (i in 1:output$topics) {
+    word_list[[i]] <- output$vocab[order(output[["by_cov"]][["Stout"]]$phi[, i],
+                                         decreasing = TRUE)][1:n]
+    names(word_list)[i] <- output$anchors[i]
+  }
+  list_by_cov[["Stout"]] <- word_list
+
+  return(list_by_cov)
+
+}
 
 
 
