@@ -230,22 +230,22 @@ gamma_words <- cov_print_top_words(nmf_country_gamma)
 selected_anchors <- nmf_country_no_covs$anchors
 
 inflat_gamma_compare_top_words <- data.frame("No_covariate" = none_words$inflat,
-                                     "Gamma_only:Canada" = gamma_words$Canada$inflat,
-                                     "Gamma_only:France" = gamma_words$France$inflat,
-                                     "Gamma_only:Germany" = gamma_words$Germany$inflat,
-                                     "Gamma_only:Italy" = gamma_words$Italy$inflat,
-                                     "Gamma_only:Japan" = gamma_words$Japan$inflat,
-                                     "Gamma_only:United_Kingdom" = gamma_words$United_Kingdom$inflat,
-                                     "Gamma_only:United_States" = gamma_words$United_States$inflat)
+                                             "Gamma_only:Canada" = gamma_words$Canada$inflat,
+                                             "Gamma_only:France" = gamma_words$France$inflat,
+                                             "Gamma_only:Germany" = gamma_words$Germany$inflat,
+                                             "Gamma_only:Italy" = gamma_words$Italy$inflat,
+                                             "Gamma_only:Japan" = gamma_words$Japan$inflat,
+                                             "Gamma_only:United_Kingdom" = gamma_words$United_Kingdom$inflat,
+                                             "Gamma_only:United_States" = gamma_words$United_States$inflat)
 
 inflat_both_compare_top_words <- data.frame("No_covariate" = none_words$inflat,
-                                             "Both:Canada" = both_words$Canada$inflat,
-                                             "Both:France" = both_words$France$inflat,
-                                             "Both:Germany" = both_words$Germany$inflat,
-                                             "Both:Italy" = both_words$Italy$inflat,
-                                             "Both:Japan" = both_words$Japan$inflat,
-                                             "Both:United_Kingdom" = both_words$United_Kingdom$inflat,
-                                             "Both:United_States" = both_words$United_States$inflat)
+                                            "Both:Canada" = both_words$Canada$inflat,
+                                            "Both:France" = both_words$France$inflat,
+                                            "Both:Germany" = both_words$Germany$inflat,
+                                            "Both:Italy" = both_words$Italy$inflat,
+                                            "Both:Japan" = both_words$Japan$inflat,
+                                            "Both:United_Kingdom" = both_words$United_Kingdom$inflat,
+                                            "Both:United_States" = both_words$United_States$inflat)
 
 get_top_word_comparison_gamma <- function(anchor_term){
   eval(parse(text = glue("gamma_compare_top_words <- data.frame(\"No_covariate\" = none_words${anchor_term},
@@ -318,3 +318,18 @@ compare_lambda <- compare_lambda |>
   full_join(both_vary_Japan, by = "anchors") |>
   full_join(both_vary_United_Kingdom, by = "anchors") |>
   full_join(both_vary_United_States, by = "anchors")
+
+
+
+##### Testing Canada alone #####
+
+data_tdm <- readRDS("speeches-g20bis-tdm.rds")
+canada_docs <- country_covariates |> as.data.frame() |> filter(Canada == 1)
+canada_tdm <- data_tdm[, rownames(canada_docs)]
+canada_input <- create_input(tdm = canada_tdm,
+                             vocab = rownames(data_tdm),
+                             topics = 40)
+canada_nmf <- solve_nmf(canada_input,
+                        user_anchors = c(user_anchors, "euro"),
+                        covariate_impact = "none")
+print_top_words(canada_nmf)
