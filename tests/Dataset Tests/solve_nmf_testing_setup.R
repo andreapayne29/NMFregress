@@ -201,10 +201,10 @@ input <- create_input(tdm = data_tdm,
 
 # solve_nmf(input = input, user_anchors = NULL, user_covariates = user_covariates)
 
-user_anchors <- c("brexit", "climat", "covid", "crisi", #"digital_currency",
-                  "inflat", #"interest_rate", "macroprudential_policy",
-                  #"monetary_policy",
-                  "ukrain")
+user_anchors <- c("brexit", "climat", "covid", "crisi", "digital_currency_",
+                  "inflat", "interest_rate_", "macroprudential_policy_",
+                  "monetary_policy_",
+                  "ukrain", "basel")
 
 #### No covariate Impact ####
 nmf_country_no_covs <- solve_nmf(input,
